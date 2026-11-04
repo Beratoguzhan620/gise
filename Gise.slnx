@@ -3,6 +3,7 @@
     <Project Path="src/Gise.Core/Gise.Core.csproj" />
     <Project Path="src/Gise.Infrastructure/Gise.Infrastructure.csproj" />
     <Project Path="src/Gise.Api/Gise.Api.csproj" />
+    <Project Path="src/Gise.PaymentSandbox/Gise.PaymentSandbox.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Gise.UnitTests/Gise.UnitTests.csproj" />
