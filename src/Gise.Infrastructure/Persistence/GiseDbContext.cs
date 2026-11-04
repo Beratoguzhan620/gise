@@ -1,12 +1,15 @@
 using Gise.Core.Events;
 using Gise.Core.Organizations;
+using Gise.Core.Queue;
+using Gise.Core.Sales;
 using Gise.Core.Users;
 using Gise.Core.Venues;
+using Gise.Infrastructure.Payments;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gise.Infrastructure.Persistence;
 
-/// <summary>Accounts, organizers and their teams, venues, events and the places they sell.</summary>
+/// <summary>Accounts, organizers and their teams, venues, events, the places they sell and the sales themselves.</summary>
 public sealed class GiseDbContext(DbContextOptions<GiseDbContext> options) : DbContext(options)
 {
     public DbSet<User> Users => Set<User>();
@@ -21,6 +24,18 @@ public sealed class GiseDbContext(DbContextOptions<GiseDbContext> options) : DbC
 
     public DbSet<Place> Places => Set<Place>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+    public DbSet<QueueEntry> QueueEntries => Set<QueueEntry>();
+
+    public DbSet<Hold> Holds => Set<Hold>();
+
+    public DbSet<Order> Orders => Set<Order>();
+
+    public DbSet<ProcessedNotice> ProcessedNotices => Set<ProcessedNotice>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        // Breaks ties in waiting rooms; a sequence rather than an identity, so someone who rejoins goes to the back.
+        modelBuilder.HasSequence<long>("queue_sequence");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(GiseDbContext).Assembly);
+    }
 }
