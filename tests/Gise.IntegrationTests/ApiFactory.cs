@@ -26,6 +26,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public FakeGateway Payments { get; } = new();
 
+    public FakeMail Mail { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -38,12 +40,16 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Sales:HoldsPerMinute", "100000");
         // No background sweep: tests sweep when they choose to, so what they see does not depend on timing.
         builder.UseSetting("Sales:ReconcileSeconds", "0");
+        builder.UseSetting("Tickets:GenerateKeyIfMissing", "true");
+        builder.UseSetting("Mail:PollSeconds", "0");
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Clock);
             services.RemoveAll<IPaymentGateway>();
             services.AddSingleton<IPaymentGateway>(Payments);
+            services.RemoveAll<Infrastructure.Mail.IMailTransport>();
+            services.AddSingleton<Infrastructure.Mail.IMailTransport>(Mail);
         });
     }
 
@@ -72,6 +78,15 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             {
                 return;
             }
+        }
+    }
+
+    /// <summary>Sends every email that is due, the way the background worker would.</summary>
+    public async Task SendEmailsAsync()
+    {
+        var worker = Services.GetRequiredService<Api.Features.Tickets.EmailWorker>();
+        while (await worker.SendDueAsync(CancellationToken.None) > 0)
+        {
         }
     }
 

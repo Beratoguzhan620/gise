@@ -81,3 +81,23 @@ public sealed record SalesSummaryDto(
 public sealed record CancelDto(Guid EventId, int OrdersToRefund, int Refunded);
 
 public sealed record WebhookDto(bool Received, string Outcome);
+
+public sealed record MyTicketDto(
+    Guid Id, Guid OrderId, string OrderNumber, Guid EventId, string EventTitle, string VenueName, string City, DateTimeOffset StartsAt, string Label,
+    string Section, string? Row, int Number, string Category, decimal Price, string Holder, string Status, string? Code, DateTimeOffset? CheckedInAt);
+
+public sealed record GateTicketDto(Guid Id, string Label, string Category, string Holder, string Status, DateTimeOffset? CheckedInAt, string? Gate);
+
+public sealed record GatePackageDto(
+    Guid EventId, string Title, DateTimeOffset StartsAt, string VenueName, string KeyId, string PublicKey, List<GateTicketDto> Tickets, DateTimeOffset GeneratedAt);
+
+public sealed record ScanResultDto(Guid ScanId, string Outcome, GateTicketDto? Ticket, DateTimeOffset ScannedAt, DateTimeOffset? FirstCheckedInAt, string? FirstGate);
+
+public sealed record GateCountDto(string Gate, int Admitted);
+
+public sealed record RepeatScanDto(Guid TicketId, string Label, string Holder, DateTimeOffset FirstAt, string? FirstGate, DateTimeOffset AgainAt, string AgainGate, string AgainDevice);
+
+public sealed record RecentScanDto(Guid ScanId, string Outcome, string? Label, string Gate, string Device, DateTimeOffset ScannedAt);
+
+public sealed record CheckInSummaryDto(
+    Guid EventId, int Tickets, int Admitted, int Remaining, List<GateCountDto> Gates, List<RepeatScanDto> Repeats, List<RecentScanDto> Recent, int Rejected);
