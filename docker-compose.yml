@@ -1,5 +1,5 @@
 # One command: docker compose up --build
-# The API and its reference: http://localhost:8080/scalar · The test payment provider: http://localhost:8081
+# The app: http://localhost:8080 · API reference: http://localhost:8080/scalar
 # Emails the API sends (tickets, refunds) land in Mailpit: http://localhost:8025
 name: gise
 
@@ -28,9 +28,7 @@ services:
       Sandbox__ApiKey: ${PAYMENTS_API_KEY:-local-sandbox-api-key}
       Sandbox__WebhookSecret: ${PAYMENTS_WEBHOOK_SECRET:-local-sandbox-webhook-secret}
       Sandbox__WebhookUrl: http://api:8080/api/payments/webhooks/sandbox
-      Sandbox__PublicUrl: ${PAYMENTS_PUBLIC_URL:-http://localhost:8081}
-    ports:
-      - "8081:8080"
+      Sandbox__PublicUrl: ${PUBLIC_URL:-http://localhost:8080}/sandbox
     healthcheck:
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q ok <&3"]
       interval: 5s
@@ -68,21 +66,38 @@ services:
       Payments__BaseUrl: http://payments:8080/
       Payments__ApiKey: ${PAYMENTS_API_KEY:-local-sandbox-api-key}
       Payments__WebhookSecret: ${PAYMENTS_WEBHOOK_SECRET:-local-sandbox-webhook-secret}
-      Payments__ReturnUrl: ${PAYMENTS_RETURN_URL:-http://localhost:8080/orders/{orderId}}
+      Payments__ReturnUrl: ${PUBLIC_URL:-http://localhost:8080}/orders/{orderId}
       # A real deployment sets Tickets__SigningKey (an ECDSA P-256 key in PEM) from its secret store instead.
       Tickets__SigningKey: ${TICKET_SIGNING_KEY:-}
       Tickets__GenerateKeyIfMissing: "true"
       Mail__Host: mail
       Mail__Port: "1025"
       Mail__PollSeconds: "2"
+      # nginx is in front: per-address limits must see the browser's address, not nginx's.
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
-    ports:
-      - "8080:8080"
     healthcheck:
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q Healthy <&3"]
       interval: 5s
       timeout: 5s
       retries: 30
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    restart: on-failure
+    depends_on:
+      api:
+        condition: service_healthy
+      payments:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
 volumes:
   db-data:

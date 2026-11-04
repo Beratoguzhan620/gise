@@ -5,7 +5,7 @@
 set -euo pipefail
 
 API=${API:-http://localhost:8080}
-PAY=${PAY:-http://localhost:8081}
+PAY=${PAY:-http://localhost:8080/sandbox}
 MAIL=${MAIL:-http://localhost:8025}
 RUN=$(date +%s%N)
 
