@@ -22,6 +22,8 @@ namespace Gise.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.HasSequence("queue_sequence");
+
             modelBuilder.Entity("Gise.Core.Events.Event", b =>
                 {
                     b.Property<Guid>("Id")
@@ -247,6 +249,206 @@ namespace Gise.Infrastructure.Persistence.Migrations
                     b.ToTable("organizations", (string)null);
                 });
 
+            modelBuilder.Entity("Gise.Core.Queue.QueueEntry", b =>
+                {
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTimeOffset?>("AdmittedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("admitted_at");
+
+                    b.Property<DateTimeOffset>("JoinedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("joined_at");
+
+                    b.Property<double>("OrderKey")
+                        .HasColumnType("double precision")
+                        .HasColumnName("order_key");
+
+                    b.Property<long>("Sequence")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("sequence")
+                        .HasDefaultValueSql("nextval('queue_sequence')");
+
+                    b.HasKey("EventId", "UserId")
+                        .HasName("pk_queue_entries");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_queue_entries_user_id");
+
+                    b.HasIndex("EventId", "OrderKey", "Sequence")
+                        .HasDatabaseName("ix_queue_entries_event_id_order_key_sequence");
+
+                    b.ToTable("queue_entries", (string)null);
+                });
+
+            modelBuilder.Entity("Gise.Core.Sales.Hold", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_id");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<int>("Places")
+                        .HasColumnType("integer")
+                        .HasColumnName("places");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_holds");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_holds_expires_at")
+                        .HasFilter("status = 'Active'");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_holds_user_id");
+
+                    b.HasIndex("EventId", "UserId", "Status")
+                        .HasDatabaseName("ix_holds_event_id_user_id_status");
+
+                    b.ToTable("holds", (string)null);
+                });
+
+            modelBuilder.Entity("Gise.Core.Sales.Order", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_minor");
+
+                    b.Property<string>("CheckoutUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("checkout_url");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("closed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_id");
+
+                    b.Property<Guid>("HoldId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("hold_id");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(11)
+                        .HasColumnType("character varying(11)")
+                        .HasColumnName("number");
+
+                    b.Property<DateTimeOffset?>("PaidAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("paid_at");
+
+                    b.Property<DateTimeOffset>("PaymentDeadline")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("payment_deadline");
+
+                    b.Property<string>("PaymentId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("payment_id");
+
+                    b.Property<string>("PaymentProvider")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("payment_provider");
+
+                    b.Property<string>("RefundReason")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("refund_reason");
+
+                    b.Property<DateTimeOffset?>("RefundRequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("refund_requested_at");
+
+                    b.Property<DateTimeOffset?>("RefundedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("refunded_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_orders");
+
+                    b.HasIndex("HoldId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_orders_hold_id");
+
+                    b.HasIndex("Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_orders_number");
+
+                    b.HasIndex("PaymentDeadline")
+                        .HasDatabaseName("ix_orders_payment_deadline")
+                        .HasFilter("status = 'PendingPayment'");
+
+                    b.HasIndex("RefundRequestedAt")
+                        .HasDatabaseName("ix_orders_refund_requested_at")
+                        .HasFilter("status = 'RefundPending'");
+
+                    b.HasIndex("EventId", "Status")
+                        .HasDatabaseName("ix_orders_event_id_status");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_orders_user_id_created_at");
+
+                    b.ToTable("orders", (string)null);
+                });
+
             modelBuilder.Entity("Gise.Core.Users.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -328,6 +530,41 @@ namespace Gise.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_venues_organization_id");
 
                     b.ToTable("venues", (string)null);
+                });
+
+            modelBuilder.Entity("Gise.Infrastructure.Payments.ProcessedNotice", b =>
+                {
+                    b.Property<string>("Provider")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("NoticeId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("notice_id");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<DateTimeOffset>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("received_at");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("type");
+
+                    b.HasKey("Provider", "NoticeId")
+                        .HasName("pk_processed_notices");
+
+                    b.HasIndex("OrderId")
+                        .HasDatabaseName("ix_processed_notices_order_id");
+
+                    b.ToTable("processed_notices", (string)null);
                 });
 
             modelBuilder.Entity("Gise.Core.Events.Event", b =>
@@ -508,6 +745,106 @@ namespace Gise.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_organizations_users_created_by");
+                });
+
+            modelBuilder.Entity("Gise.Core.Queue.QueueEntry", b =>
+                {
+                    b.HasOne("Gise.Core.Events.Event", null)
+                        .WithMany()
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_queue_entries_events_event_id");
+
+                    b.HasOne("Gise.Core.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_queue_entries_users_user_id");
+                });
+
+            modelBuilder.Entity("Gise.Core.Sales.Hold", b =>
+                {
+                    b.HasOne("Gise.Core.Events.Event", null)
+                        .WithMany()
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_holds_events_event_id");
+
+                    b.HasOne("Gise.Core.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_holds_users_user_id");
+                });
+
+            modelBuilder.Entity("Gise.Core.Sales.Order", b =>
+                {
+                    b.HasOne("Gise.Core.Events.Event", null)
+                        .WithMany()
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_orders_events_event_id");
+
+                    b.HasOne("Gise.Core.Sales.Hold", null)
+                        .WithOne()
+                        .HasForeignKey("Gise.Core.Sales.Order", "HoldId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_orders_holds_hold_id");
+
+                    b.HasOne("Gise.Core.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_orders_users_user_id");
+
+                    b.OwnsMany("Gise.Core.Sales.OrderLine", "Lines", b1 =>
+                        {
+                            b1.Property<Guid>("OrderId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<Guid>("CategoryId");
+
+                            b1.Property<string>("CategoryName")
+                                .IsRequired();
+
+                            b1.Property<int>("Number");
+
+                            b1.Property<Guid>("PlaceId");
+
+                            b1.Property<long>("PriceMinor");
+
+                            b1.Property<string>("Row");
+
+                            b1.Property<string>("SectionKey")
+                                .IsRequired()
+                                .HasMaxLength(12);
+
+                            b1.Property<string>("SectionName")
+                                .IsRequired();
+
+                            b1.HasKey("OrderId", "__synthesizedOrdinal");
+
+                            b1.ToTable("orders");
+
+                            b1
+                                .ToJson("lines")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("OrderId")
+                                .HasConstraintName("fk_orders_orders_order_id");
+                        });
+
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("Gise.Core.Venues.Venue", b =>
