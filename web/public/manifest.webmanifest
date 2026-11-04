@@ -1,0 +1,9 @@
+{
+  "name": "Gişe",
+  "short_name": "Gişe",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F6F3",
+  "theme_color": "#8E2F3C",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
