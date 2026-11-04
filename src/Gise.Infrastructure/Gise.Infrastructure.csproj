@@ -8,6 +8,12 @@
     <PackageReference Include="EFCore.NamingConventions" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="PdfPig" />
+    <PackageReference Include="QRCoder" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Tickets\Fonts\*.ttf" />
   </ItemGroup>
 
   <ItemGroup>
