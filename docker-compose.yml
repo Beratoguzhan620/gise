@@ -1,5 +1,6 @@
 # One command: docker compose up --build
 # The API and its reference: http://localhost:8080/scalar · The test payment provider: http://localhost:8081
+# Emails the API sends (tickets, refunds) land in Mailpit: http://localhost:8025
 name: gise
 
 services:
@@ -36,6 +37,17 @@ services:
       timeout: 5s
       retries: 20
 
+  # Catches every email instead of delivering it, with a web inbox to read them.
+  mail:
+    image: axllent/mailpit:v1.31.6
+    ports:
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   api:
     build: .
     restart: on-failure
@@ -43,6 +55,8 @@ services:
       db:
         condition: service_healthy
       payments:
+        condition: service_healthy
+      mail:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
@@ -55,6 +69,12 @@ services:
       Payments__ApiKey: ${PAYMENTS_API_KEY:-local-sandbox-api-key}
       Payments__WebhookSecret: ${PAYMENTS_WEBHOOK_SECRET:-local-sandbox-webhook-secret}
       Payments__ReturnUrl: ${PAYMENTS_RETURN_URL:-http://localhost:8080/orders/{orderId}}
+      # A real deployment sets Tickets__SigningKey (an ECDSA P-256 key in PEM) from its secret store instead.
+      Tickets__SigningKey: ${TICKET_SIGNING_KEY:-}
+      Tickets__GenerateKeyIfMissing: "true"
+      Mail__Host: mail
+      Mail__Port: "1025"
+      Mail__PollSeconds: "2"
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
     ports:
       - "8080:8080"
