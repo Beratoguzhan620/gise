@@ -6,9 +6,11 @@ using Gise.Api.Common;
 using Gise.Api.Features.Auth;
 using Gise.Api.Features.Events;
 using Gise.Api.Features.Organizations;
+using Gise.Api.Features.Sales;
 using Gise.Api.Features.Venues;
 using Gise.Api.Logging;
 using Gise.Infrastructure;
+using Gise.Infrastructure.Payments;
 using Gise.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Scalar.AspNetCore;
@@ -34,6 +36,20 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddMemoryCache();
 builder.Services.AddGisePersistence(connectionString);
 builder.Services.AddGiseAuth(builder.Configuration);
+builder.Services.AddGisePayments(builder.Configuration);
+builder.Services.AddOptions<SalesOptions>()
+    .Bind(builder.Configuration.GetSection(SalesOptions.Section))
+    .Validate(o => o.HoldMinutes is >= 1 and <= 30, "Sales:HoldMinutes must be between 1 and 30.")
+    .Validate(o => o.ShoppingMinutes is >= 1 and <= 60, "Sales:ShoppingMinutes must be between 1 and 60.")
+    .Validate(o => o.HoldsPerMinute >= 1, "Sales:HoldsPerMinute must be at least 1.")
+    .Validate(o => o.ReconcileSeconds >= 0 && o.PaymentGraceSeconds >= 0, "Sales:ReconcileSeconds and Sales:PaymentGraceSeconds cannot be negative.")
+    .ValidateOnStart();
+builder.Services.AddScoped<QueueService>();
+builder.Services.AddScoped<HoldService>();
+builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<PaymentProcessor>();
+builder.Services.AddSingleton<SalesReconciler>();
+builder.Services.AddHostedService(services => services.GetRequiredService<SalesReconciler>());
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -50,6 +66,14 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy(AuthEndpoints.RateLimit, context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = perMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    // Taking places and polling the waiting room, per person: a bot hammering the sale gets turned away early.
+    var holdsPerMinute = builder.Configuration.GetValue("Sales:HoldsPerMinute", 30);
+    options.AddPolicy(BuyerEndpoints.RateLimit, context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst("sub")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = holdsPerMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    options.AddPolicy(QueueEndpoints.RateLimit, context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst("sub")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = holdsPerMinute * 4, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     options.OnRejected = async (context, _) =>
     {
         context.HttpContext.Response.Headers.RetryAfter = "60";
@@ -105,6 +129,10 @@ app.MapMemberEndpoints();
 app.MapVenueEndpoints();
 app.MapEventEndpoints();
 app.MapCatalogEndpoints();
+app.MapQueueEndpoints();
+app.MapBuyerEndpoints();
+app.MapOrganizerSalesEndpoints();
+app.MapWebhookEndpoints();
 
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });

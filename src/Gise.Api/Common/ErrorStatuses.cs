@@ -15,6 +15,12 @@ internal static class ErrorStatuses
         [ErrorCodes.Conflict] = StatusCodes.Status409Conflict,
         [ErrorCodes.EmailTaken] = StatusCodes.Status409Conflict,
         [ErrorCodes.RateLimited] = StatusCodes.Status429TooManyRequests,
+        [ErrorCodes.SaleNotOpen] = StatusCodes.Status409Conflict,
+        [ErrorCodes.QueueRequired] = StatusCodes.Status409Conflict,
+        [ErrorCodes.PlaceUnavailable] = StatusCodes.Status409Conflict,
+        [ErrorCodes.HoldExpired] = StatusCodes.Status410Gone,
+        [ErrorCodes.PaymentUnavailable] = StatusCodes.Status503ServiceUnavailable,
+        [ErrorCodes.InvalidSignature] = StatusCodes.Status400BadRequest,
     };
 
     public static int StatusFor(string code) =>
