@@ -46,3 +46,38 @@ public sealed record RowAvailabilityDto(string Label, string Seats);
 public sealed record SectionAvailabilityDto(string Key, string Kind, int Available, int Places, List<RowAvailabilityDto> Rows);
 
 public sealed record AvailabilityDto(Guid EventId, string SaleState, int Available, List<SectionAvailabilityDto> Sections, DateTimeOffset CheckedAt);
+
+public sealed record QueueDto(
+    Guid EventId, bool WaitingRoom, bool Admitted, long? Position, long? Ahead, DateTimeOffset SaleStartsAt, DateTimeOffset? AdmittedAt,
+    DateTimeOffset? ShopUntil, int? EstimatedWaitSeconds, int AdmitPerMinute);
+
+public sealed record LineDto(Guid PlaceId, string Section, string SectionName, string? Row, int Number, Guid CategoryId, string Category, decimal Price);
+
+public sealed record HoldDto(Guid Id, Guid EventId, string Status, DateTimeOffset ExpiresAt, List<LineDto> Lines, decimal Total, string Currency);
+
+public sealed record OrderEventDto(Guid Id, string Title, string VenueName, string City, DateTimeOffset StartsAt, string Status);
+
+public sealed record OrderDto(
+    Guid Id, string Number, string Status, OrderEventDto Event, List<LineDto> Lines, decimal Amount, string Currency, DateTimeOffset CreatedAt,
+    DateTimeOffset PaymentDeadline, string? CheckoutUrl, DateTimeOffset? PaidAt, string? RefundReason, DateTimeOffset? RefundRequestedAt,
+    DateTimeOffset? RefundedAt, bool CanRefund, DateTimeOffset? RefundDeadline);
+
+public sealed record OrderSummaryDto(
+    Guid Id, string Number, string Status, Guid EventId, string EventTitle, string VenueName, DateTimeOffset StartsAt, int Tickets, decimal Amount,
+    string Currency, DateTimeOffset CreatedAt);
+
+public sealed record OrganizerOrderDto(
+    Guid Id, string Number, string Status, string BuyerName, string BuyerEmail, int Tickets, decimal Amount, string Currency, DateTimeOffset CreatedAt,
+    DateTimeOffset? PaidAt, string? RefundReason);
+
+public sealed record CategorySalesDto(Guid Id, string Name, decimal Price, int Capacity, int Sold, int Held, int Available, decimal Revenue);
+
+public sealed record DailySalesDto(DateOnly Date, int Tickets, decimal Revenue);
+
+public sealed record SalesSummaryDto(
+    Guid EventId, string Currency, decimal Gross, decimal Refunded, decimal Net, int PaidOrders, int TicketsSold, int PendingOrders, int RefundedOrders,
+    List<CategorySalesDto> Categories, List<DailySalesDto> Days);
+
+public sealed record CancelDto(Guid EventId, int OrdersToRefund, int Refunded);
+
+public sealed record WebhookDto(bool Received, string Outcome);

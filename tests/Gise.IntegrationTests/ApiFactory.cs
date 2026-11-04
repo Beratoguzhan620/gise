@@ -1,3 +1,5 @@
+using Gise.Infrastructure.Payments;
+using Gise.IntegrationTests.Support;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -13,6 +15,7 @@ namespace Gise.IntegrationTests;
 public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string SigningKey = "integration-tests-signing-key-0123456789abcdef";
+    public const string WebhookSecret = "integration-tests-webhook-secret";
 
     private readonly PostgreSqlContainer _database = new PostgreSqlBuilder("postgres:17-alpine").Build();
 
@@ -21,6 +24,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public string ConnectionString => _database.GetConnectionString();
 
+    public FakeGateway Payments { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -28,10 +33,17 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Database:MigrateOnStartup", "true");
         builder.UseSetting("Jwt:SigningKey", SigningKey);
         builder.UseSetting("Auth:AttemptsPerMinute", "100000");
+        builder.UseSetting("Payments:WebhookSecret", WebhookSecret);
+        builder.UseSetting("Payments:ApiKey", "not-used");
+        builder.UseSetting("Sales:HoldsPerMinute", "100000");
+        // No background sweep: tests sweep when they choose to, so what they see does not depend on timing.
+        builder.UseSetting("Sales:ReconcileSeconds", "0");
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Clock);
+            services.RemoveAll<IPaymentGateway>();
+            services.AddSingleton<IPaymentGateway>(Payments);
         });
     }
 
@@ -47,6 +59,20 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
         var result = await command.ExecuteScalarAsync();
         return result is null or DBNull ? default : (T)result;
+    }
+
+    /// <summary>Sweeps until there is nothing left to do, so leftovers from earlier tests never crowd out this one's.</summary>
+    public async Task ReconcileAsync()
+    {
+        var reconciler = Services.GetRequiredService<Api.Features.Sales.SalesReconciler>();
+        for (var i = 0; i < 20; i++)
+        {
+            var result = await reconciler.ReconcileOnceAsync(CancellationToken.None);
+            if (result == new Api.Features.Sales.ReconcileResult(0, 0, 0, 0))
+            {
+                return;
+            }
+        }
     }
 
     public async Task InitializeAsync()

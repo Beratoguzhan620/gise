@@ -1,0 +1,68 @@
+# One command: docker compose up --build
+# The API and its reference: http://localhost:8080/scalar · The test payment provider: http://localhost:8081
+name: gise
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: gise
+      POSTGRES_USER: gise
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gise-local}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gise -d gise"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # A stand-in payment provider: hosted payment page, small API, signed webhooks. No real money.
+  payments:
+    build:
+      context: .
+      dockerfile: src/Gise.PaymentSandbox/Dockerfile
+    restart: on-failure
+    environment:
+      Sandbox__ApiKey: ${PAYMENTS_API_KEY:-local-sandbox-api-key}
+      Sandbox__WebhookSecret: ${PAYMENTS_WEBHOOK_SECRET:-local-sandbox-webhook-secret}
+      Sandbox__WebhookUrl: http://api:8080/api/payments/webhooks/sandbox
+      Sandbox__PublicUrl: ${PAYMENTS_PUBLIC_URL:-http://localhost:8081}
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q ok <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: .
+    restart: on-failure
+    depends_on:
+      db:
+        condition: service_healthy
+      payments:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Gise: "Host=db;Database=gise;Username=gise;Password=${POSTGRES_PASSWORD:-gise-local}"
+      Database__MigrateOnStartup: "true"
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:-local-signing-key-change-me-in-the-env-file-0123456789}
+      Auth__AttemptsPerMinute: ${AUTH_ATTEMPTS_PER_MINUTE:-10}
+      Sales__HoldsPerMinute: ${HOLDS_PER_MINUTE:-30}
+      Payments__BaseUrl: http://payments:8080/
+      Payments__ApiKey: ${PAYMENTS_API_KEY:-local-sandbox-api-key}
+      Payments__WebhookSecret: ${PAYMENTS_WEBHOOK_SECRET:-local-sandbox-webhook-secret}
+      Payments__ReturnUrl: ${PAYMENTS_RETURN_URL:-http://localhost:8080/orders/{orderId}}
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q Healthy <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  db-data:

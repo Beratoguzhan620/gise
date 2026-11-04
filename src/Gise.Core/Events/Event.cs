@@ -196,8 +196,9 @@ public sealed class Event
         Description = description;
         VenueId = venue.Id;
         CopyVenue(venue);
-        StartsAt = details.StartsAt;
-        SaleStartsAt = details.SaleStartsAt;
+        // Stored and compared in UTC whatever offset the organizer's browser sent.
+        StartsAt = details.StartsAt.ToUniversalTime();
+        SaleStartsAt = details.SaleStartsAt.ToUniversalTime();
         MaxTicketsPerBuyer = details.MaxTicketsPerBuyer;
         RefundCutoffHours = details.RefundCutoffHours;
         WaitingRoom = details.WaitingRoom;
