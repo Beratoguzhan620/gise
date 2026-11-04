@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Gise.Api.Common;
 using Gise.Api.Features.Events;
 using Gise.Api.Features.Organizations;
+using Gise.Api.Features.Tickets;
 using Gise.Core;
 using Gise.Core.Events;
 using Gise.Core.Organizations;
@@ -129,7 +130,8 @@ internal static class OrganizerSalesEndpoints
     }
 
     private static async Task<Ok<CancelResponse>> Cancel(
-        Guid organizationId, Guid eventId, ClaimsPrincipal user, GiseDbContext db, OrderService orders, TimeProvider clock, CancellationToken ct)
+        Guid organizationId, Guid eventId, ClaimsPrincipal user, GiseDbContext db, OrderService orders, TicketBook tickets, TimeProvider clock,
+        CancellationToken ct)
     {
         await OrganizationAccess.RequireAsync(db, organizationId, user, Role.Manager, ct);
         var now = clock.GetUtcNow();
@@ -151,6 +153,7 @@ internal static class OrganizerSalesEndpoints
             foreach (var order in paid)
             {
                 order.RequestRefund(RefundReason.EventCancelled, now);
+                await tickets.VoidAsync(order, now, ct);
             }
 
             await db.SaveChangesAsync(ct);

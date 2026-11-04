@@ -1,3 +1,4 @@
+using Gise.Api.Features.Tickets;
 using Gise.Core;
 using Gise.Core.Events;
 using Gise.Core.Sales;
@@ -10,7 +11,7 @@ namespace Gise.Api.Features.Sales;
 
 /// <summary>Turns a hold into an order the buyer pays at the provider, and gives money back when an order is refunded.</summary>
 internal sealed partial class OrderService(
-    GiseDbContext db, IPaymentGateway gateway, TimeProvider clock, IOptions<PaymentOptions> payments, ILogger<OrderService> logger)
+    GiseDbContext db, IPaymentGateway gateway, TicketBook tickets, TimeProvider clock, IOptions<PaymentOptions> payments, ILogger<OrderService> logger)
 {
     public async Task<(Order Order, bool Created)> CheckoutAsync(Event @event, Guid holdId, Guid userId, CancellationToken ct)
     {
@@ -73,6 +74,7 @@ internal sealed partial class OrderService(
             await db.Entry(order).ReloadAsync(ct);
             order.RequestRefund(reason, now);
             await PlaceClaims.ReleaseSoldAsync(db, order.HoldId, ct);
+            await tickets.VoidAsync(order, now, ct);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
         }

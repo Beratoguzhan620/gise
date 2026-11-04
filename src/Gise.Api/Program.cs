@@ -5,12 +5,15 @@ using System.Threading.RateLimiting;
 using Gise.Api.Common;
 using Gise.Api.Features.Auth;
 using Gise.Api.Features.Events;
+using Gise.Api.Features.Gate;
 using Gise.Api.Features.Organizations;
 using Gise.Api.Features.Sales;
+using Gise.Api.Features.Tickets;
 using Gise.Api.Features.Venues;
 using Gise.Api.Logging;
 using Gise.Infrastructure;
 using Gise.Infrastructure.Payments;
+using Gise.Infrastructure.Tickets;
 using Gise.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Scalar.AspNetCore;
@@ -50,6 +53,13 @@ builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<PaymentProcessor>();
 builder.Services.AddSingleton<SalesReconciler>();
 builder.Services.AddHostedService(services => services.GetRequiredService<SalesReconciler>());
+builder.Services.AddGiseTickets(builder.Configuration);
+builder.Services.AddSingleton<TicketTime>();
+builder.Services.AddScoped<TicketBook>();
+builder.Services.AddScoped<EmailComposer>();
+builder.Services.AddScoped<CheckInService>();
+builder.Services.AddSingleton<EmailWorker>();
+builder.Services.AddHostedService(services => services.GetRequiredService<EmailWorker>());
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -133,6 +143,8 @@ app.MapQueueEndpoints();
 app.MapBuyerEndpoints();
 app.MapOrganizerSalesEndpoints();
 app.MapWebhookEndpoints();
+app.MapTicketEndpoints();
+app.MapGateEndpoints();
 
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
@@ -141,6 +153,8 @@ if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
 {
     await DependencyInjection.MigrateAsync(app.Services);
 }
+
+await TicketCodes.InitializeAsync(app.Services);
 
 await app.RunAsync();
 

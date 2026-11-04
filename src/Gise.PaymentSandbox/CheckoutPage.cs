@@ -1,5 +1,6 @@
 using System.Globalization;
-using System.Net;
+using System.Text.Encodings.Web;
+using System.Text.Unicode;
 
 namespace Gise.PaymentSandbox;
 
@@ -7,6 +8,7 @@ namespace Gise.PaymentSandbox;
 internal static class CheckoutPage
 {
     private static readonly CultureInfo Turkish = CultureInfo.GetCultureInfo("tr-TR");
+    private static readonly HtmlEncoder Html = HtmlEncoder.Create(UnicodeRanges.All);
 
     public static string Render(Payment payment, string publicUrl, DateTimeOffset now)
     {
@@ -76,5 +78,5 @@ internal static class CheckoutPage
             """;
     }
 
-    private static string E(string value) => WebUtility.HtmlEncode(value);
+    private static string E(string value) => Html.Encode(value);
 }

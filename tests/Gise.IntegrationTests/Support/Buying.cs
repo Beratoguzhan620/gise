@@ -75,3 +75,19 @@ public static class Buying
     public static Task<long> CountPlacesAsync(this ApiFactory factory, Guid eventId, string status) =>
         factory.ScalarAsync<long>("SELECT count(*) FROM places WHERE event_id = @p0 AND status = @p1", eventId, status);
 }
+
+public static class Gate
+{
+    public static async Task<ScanResultDto> ScanAsync(this Organizer organizer, Guid eventId, string code, string gate, DateTimeOffset? scannedAt = null, Person? staff = null) =>
+        (await organizer.SyncAsync(eventId, [new { scanId = Guid.NewGuid(), code, gate, device = $"{gate}-1", scannedAt }], staff)).Single();
+
+    public static async Task<List<ScanResultDto>> SyncAsync(this Organizer organizer, Guid eventId, object[] scans, Person? staff = null)
+    {
+        var response = await (staff ?? organizer.Owner).Http.PostAsJsonAsync($"/api/organizations/{organizer.Id}/events/{eventId}/check-ins", new { scans });
+        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+        return await response.ReadAsync<List<ScanResultDto>>();
+    }
+
+    public static async Task<List<string>> CodesAsync(this Person buyer, Guid orderId) =>
+        (await (await buyer.Http.GetAsync("/api/tickets")).ReadAsync<List<MyTicketDto>>()).Where(t => t.OrderId == orderId).Select(t => t.Code!).ToList();
+}

@@ -190,6 +190,6 @@ internal sealed partial class HoldService(GiseDbContext db, QueueService queue, 
 
     private static DomainException Invalid(string message) => new(ErrorCodes.ValidationFailed, message);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Hold {HoldId} for event {EventId}: {Places} places")]
-    private static partial void LogHeld(ILogger logger, Guid holdId, Guid eventId, int places);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Hold {HoldId} for event {Event}: {Places} places")]
+    private static partial void LogHeld(ILogger logger, Guid holdId, Guid @event, int places);
 }
