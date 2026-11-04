@@ -1,3 +1,4 @@
+using Gise.Api.Features.Tickets;
 using Gise.Core.Events;
 using Gise.Core.Sales;
 using Gise.Infrastructure.Payments;
@@ -21,7 +22,7 @@ public enum NoticeOutcome
 /// Acts on what the payment provider reports. Each notice is recorded in the same transaction that acts on it,
 /// so a notice delivered twice, or a webhook and a poll that both report the same payment, change things once.
 /// </summary>
-internal sealed partial class PaymentProcessor(GiseDbContext db, TimeProvider clock, ILogger<PaymentProcessor> logger)
+internal sealed partial class PaymentProcessor(GiseDbContext db, TicketBook tickets, TimeProvider clock, ILogger<PaymentProcessor> logger)
 {
     public async Task<NoticeOutcome> ApplyAsync(string provider, PaymentNotice notice, CancellationToken ct)
     {
@@ -78,6 +79,7 @@ internal sealed partial class PaymentProcessor(GiseDbContext db, TimeProvider cl
         {
             await PlaceClaims.ReleaseHeldAsync(db, order.HoldId, ct);
             order.RefundLatePayment(now);
+            await tickets.VoidAsync(order, now, ct);
             return;
         }
 
@@ -88,12 +90,14 @@ internal sealed partial class PaymentProcessor(GiseDbContext db, TimeProvider cl
         if (sold == order.Lines.Count)
         {
             order.MarkPaid(now);
+            await tickets.IssueAsync(order, now, ct);
             return;
         }
 
         // Some places went to someone else: none of them is sold to this buyer, and their money goes back.
         await PlaceClaims.ReleaseSoldAsync(db, order.HoldId, ct);
         order.RefundLatePayment(now);
+        await tickets.VoidAsync(order, now, ct);
         LogLate(logger, order.Id);
     }
 
