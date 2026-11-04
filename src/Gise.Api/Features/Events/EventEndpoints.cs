@@ -110,6 +110,6 @@ internal static partial class EventEndpoints
     // A draft has no places yet; what it would sell is the venue's capacity.
     private static InventoryCounts Empty(Event e) => new(e.Status == EventStatus.Draft ? e.Capacity : 0, 0, 0);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Event {EventId} published with {Places} places")]
-    private static partial void LogPublished(ILogger logger, Guid eventId, int places);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Event {Event} published with {Places} places")]
+    private static partial void LogPublished(ILogger logger, Guid @event, int places);
 }
