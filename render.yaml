@@ -1,0 +1,35 @@
+# The public demo on Render's free plan: one web service from deploy/demo/Dockerfile (nginx, the API, the stand-in
+# payment provider and Mailpit), with the database on Neon. Render asks for the connection string once.
+services:
+  - type: web
+    name: gise-demo
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./deploy/demo/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health/ready
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: ConnectionStrings__Gise
+        sync: false
+      - key: Database__MigrateOnStartup
+        value: "true"
+      - key: Jwt__SigningKey
+        generateValue: true
+      - key: PAYMENTS_API_KEY
+        generateValue: true
+      - key: PAYMENTS_WEBHOOK_SECRET
+        generateValue: true
+      # The ticket signing key is generated on first start and kept in the database.
+      - key: Tickets__GenerateKeyIfMissing
+        value: "true"
+      - key: Mail__PollSeconds
+        value: "2"
+      # Sample events and the two published sign-ins (see the sign-in page).
+      - key: Demo__Enabled
+        value: "true"
+      - key: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+        value: "true"
+      - key: PORT
+        value: "8080"
