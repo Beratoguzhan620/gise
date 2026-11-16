@@ -4,6 +4,7 @@ using System.Text.Unicode;
 using System.Threading.RateLimiting;
 using Gise.Api.Common;
 using Gise.Api.Features.Auth;
+using Gise.Api.Features.Demo;
 using Gise.Api.Features.Events;
 using Gise.Api.Features.Gate;
 using Gise.Api.Features.Organizations;
@@ -28,7 +29,7 @@ builder.Services.AddSerilog((services, logger) => logger
     .ReadFrom.Services(services)
     .Enrich.FromLogContext());
 
-var connectionString = builder.Configuration.GetConnectionString("Gise");
+var connectionString = ConnectionStrings.FromUrl(builder.Configuration.GetConnectionString("Gise"));
 if (string.IsNullOrWhiteSpace(connectionString))
 {
     throw new InvalidOperationException(
@@ -60,6 +61,16 @@ builder.Services.AddScoped<EmailComposer>();
 builder.Services.AddScoped<CheckInService>();
 builder.Services.AddSingleton<EmailWorker>();
 builder.Services.AddHostedService(services => services.GetRequiredService<EmailWorker>());
+builder.Services.Configure<DemoOptions>(builder.Configuration.GetSection(DemoOptions.Section));
+if (builder.Configuration.GetValue($"{DemoOptions.Section}:Enabled", false))
+{
+    builder.Services.AddHttpClient(DemoSeeder.HttpClientName, (services, http) =>
+    {
+        http.BaseAddress = new Uri(services.GetRequiredService<Microsoft.Extensions.Options.IOptions<DemoOptions>>().Value.BaseUrl);
+        http.Timeout = TimeSpan.FromSeconds(30);
+    });
+    builder.Services.AddHostedService<DemoSeeder>();
+}
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -134,6 +145,7 @@ app.MapScalarApiReference(options => options
 
 app.MapGet("/", () => Results.Redirect("/scalar")).ExcludeFromDescription();
 app.MapAuthEndpoints();
+app.MapDemoEndpoints();
 app.MapOrganizationEndpoints();
 app.MapMemberEndpoints();
 app.MapVenueEndpoints();
