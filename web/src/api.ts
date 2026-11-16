@@ -77,7 +77,7 @@ export const api = {
   register: (body: { email: string; displayName: string; password: string }) => request<Session>("/api/auth/register", post(body)),
   login: (email: string, password: string) => request<Session>("/api/auth/login", post({ email, password })),
   me: () => request<Me>("/api/me"),
-  /** The public demo's sign-ins; elsewhere this answers 404. */
+  /** The public demo's sign-ins; empty anywhere else. */
   demo: () => request<{ role: string; email: string; password: string }[]>("/api/demo"),
 
   events: (params: { q?: string; city?: string; page?: number }) => request<Page<EventSummary>>(`/api/events${query({ ...params, pageSize: 24 })}`),

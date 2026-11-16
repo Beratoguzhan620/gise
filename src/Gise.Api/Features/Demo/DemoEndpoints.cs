@@ -12,16 +12,17 @@ internal static class DemoEndpoints
         app.MapGet("/api/demo", Accounts)
             .WithTags("Auth")
             .WithSummary("The public demo's sign-ins")
-            .WithDescription("Answers 404 unless this installation is the public demo.");
+            .WithDescription("An empty list unless this installation is the public demo.");
         return app;
     }
 
-    private static Results<Ok<List<DemoAccount>>, NotFound> Accounts(IOptions<DemoOptions> options) =>
-        options.Value is { Enabled: true } demo
-            ? TypedResults.Ok(new List<DemoAccount>
+    // Empty rather than 404 elsewhere, so the sign-in page's question leaves no failed request in the browser console.
+    private static Ok<List<DemoAccount>> Accounts(IOptions<DemoOptions> options) =>
+        TypedResults.Ok(options.Value is { Enabled: true } demo
+            ? new List<DemoAccount>
             {
                 new("Buyer", demo.BuyerEmail, demo.Password),
                 new("Organizer", demo.OrganizerEmail, demo.Password),
-            })
-            : TypedResults.NotFound();
+            }
+            : []);
 }

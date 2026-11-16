@@ -61,7 +61,7 @@ public sealed class DemoTests : IAsyncLifetime
     {
         using var client = _api.CreateClient();
 
-        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/demo")).StatusCode);
+        Assert.Empty((await client.GetFromJsonAsync<List<DemoAccount>>("/api/demo"))!);
     }
 
     private static async Task<int> WaitForEventsAsync(HttpClient client)

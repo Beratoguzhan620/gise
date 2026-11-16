@@ -34,7 +34,7 @@ export function SignIn({ next }: { next?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [demo, setDemo] = useState<{ role: string; email: string; password: string }[]>([]);
 
-  // The public demo publishes two sign-ins; anywhere else the request answers 404 and nothing is shown.
+  // The public demo publishes two sign-ins; anywhere else the list is empty and nothing is shown.
   useEffect(() => {
     api.demo().then(setDemo, () => setDemo([]));
   }, []);
