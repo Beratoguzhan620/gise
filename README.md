@@ -15,6 +15,8 @@ Ticketing for concerts, plays and festivals, built for the moment a sale opens. 
 
 ## Try it
 
+**Live demo:** [gise-demo.onrender.com](https://gise-demo.onrender.com). Press *Try it as a buyer* or *Try it as the organizer* on the sign-in page. The ticket emails arrive in a shared inbox at [/mail](https://gise-demo.onrender.com/mail/), so use a made-up address if you sign up. It runs on a free server with the database on Neon: after a quiet spell the first visit can take about a minute.
+
 ```bash
 docker compose up --build
 ```
