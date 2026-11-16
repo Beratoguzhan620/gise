@@ -15,6 +15,8 @@ Konser, tiyatro ve festivaller için biletleme; satışın açıldığı an dü�
 
 ## Deneyin
 
+**Canlı demo:** [gise-demo.onrender.com](https://gise-demo.onrender.com). Giriş sayfasında *Try it as a buyer* ya da *Try it as the organizer*'a bas. Bilet e-postaları ortak bir gelen kutusuna, [/mail](https://gise-demo.onrender.com/mail/) adresine düşer; kayıt olursan uydurma bir adres kullan. Ücretsiz bir sunucuda, veritabanı Neon'da çalışıyor: bir süre kimse açmadıysa ilk açılış bir dakika kadar sürebilir.
+
 ```bash
 docker compose up --build
 ```
